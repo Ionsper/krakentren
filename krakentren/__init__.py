@@ -1,6 +1,6 @@
 """ Kraken_trade_enhancer
 
-Placeholder
+A python package to interact with Kraken.com REST API
 
 """
 from .krakentren import (round_down_decimals,

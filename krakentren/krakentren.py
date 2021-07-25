@@ -4,7 +4,6 @@ from time import time
 from urllib.parse import urlencode
 import pandas as pd
 import numpy as np
-from pandas.core.frame import DataFrame
 import requests
 import base64
 import hashlib
@@ -118,7 +117,7 @@ def get_asset_pair_info(pair=str) -> dict:
     return contact_kraken("AssetPairs", {"pair=": pair})[pair]
 
 
-def get_account_balance(public_key=str, private_key=str) -> DataFrame:
+def get_account_balance(public_key=str, private_key=str) -> pd.DataFrame:
     """Returns tuple with account's dict with all assets/amounts and
     pandas dataframe with assets and estimated value
 
@@ -257,12 +256,12 @@ def cancel_order(txid=str, public_key=str, private_key=str):
                    private_key)
 
 
-def sma_indicator_data(df=DataFrame, period=int, column_name=str):
+def sma_indicator_data(df=pd.DataFrame, period=int, column_name=str):
     df[column_name] = df["Close price"].rolling(window=period).mean()
     df[column_name] = df[column_name].round(2)
 
 
-def mfi_indicator_data(df=DataFrame, period=int, column_name=str):
+def mfi_indicator_data(df=pd.DataFrame, period=int, column_name=str):
     # Calculates Typical price for every row
     df["Typical price"] = (df["High"] + df["Low"] + df["Close price"]) / 3
     # Calculates if period has positive or negative flow
@@ -296,7 +295,7 @@ def mfi_indicator_data(df=DataFrame, period=int, column_name=str):
     df[column_name] = df[column_name].round(2)
 
 
-def psl_indicator_data(df=DataFrame, period=int, column_name=str):
+def psl_indicator_data(df=pd.DataFrame, period=int, column_name=str):
     df["bar_price_compare"] = np.where(
         df["Close price"] > df["Close price"].shift(1), 1, 0)
     df[column_name] = (df["bar_price_compare"].rolling(
@@ -305,7 +304,7 @@ def psl_indicator_data(df=DataFrame, period=int, column_name=str):
     df[column_name] = df[column_name].round(2)
 
 
-def chop_indicator_data(df=DataFrame, period=int, column_name=str):
+def chop_indicator_data(df=pd.DataFrame, period=int, column_name=str):
     # calculate True range
     df["tr1"] = df["High"] - df["Low"]
     df["tr2"] = abs(df["High"] - df["Close price"].shift(1))
@@ -322,9 +321,68 @@ def chop_indicator_data(df=DataFrame, period=int, column_name=str):
     df[column_name] = df[column_name].round(2)
 
 
-def roc_indicator_data(df=DataFrame, period=int, column_name=str):
+def roc_indicator_data(df=pd.DataFrame, period=int, column_name=str):
     df[column_name] = df["Close price"] / df["Close price"].shift(period-1)
     df[column_name] = (df[column_name] * 100) - 100
+    df[column_name] = df[column_name].round(2)
+
+
+def psar_indicator_data(df=pd.DataFrame, iaf=float, max_af=float, column_name=str):
+    af = iaf
+    df["uptrend"] = None
+    df["reverse"] = False
+    df.loc[1, "uptrend"] = True
+    df[column_name] = df["Close price"]
+    uptrend_high = df["High"][0]
+    downtrend_low = df["Low"][0]
+    for row in range(2, len(df)):
+        if df["uptrend"][row-1]:  # Calculate uptrend psar
+            df.loc[row, column_name] = (df[column_name][row-1]
+                                        + af
+                                        * (uptrend_high - df[column_name][row-1]))
+            # Check trend reverse status
+            df.loc[row, "uptrend"] = True
+            if df["Low"][row] < df[column_name][row]:  # Uptrend stop/reverse
+                df.loc[row, "uptrend"] = False
+                df.loc[row, column_name] = uptrend_high
+                downtrend_low = df["Low"][row]
+                df.loc[row, "reverse"] = True
+                af = iaf
+            if not df["reverse"][row]:  # If not reverse is occuring
+                if df["High"][row] > uptrend_high:
+                    uptrend_high = df["High"][row]
+                    af = min(af + iaf, max_af)
+                if df["Low"][row-1] < df[column_name][row]:
+                    df.loc[row, column_name] = df["Low"][row-1]
+                if df["Low"][row-2] < df[column_name][row]:
+                    df.loc[row, column_name] = df["Low"][row-2]
+
+        else:  # Calculate downtrend psar
+            df.loc[row, column_name] = (df[column_name][row-1]
+                                        + af
+                                        * (downtrend_low - df[column_name][row-1]))
+            # Check trend reverse status
+            df.loc[row, "uptrend"] = False
+            if df["High"][row] > df[column_name][row]:  # Downtrend stop/reverse
+                df.loc[row, "uptrend"] = True
+                df.loc[row, column_name] = downtrend_low
+                uptrend_high = df["High"][row]
+                df.loc[row, "reverse"] = True
+                af = iaf
+            if not df["reverse"][row]:  # If not reverse is occuring
+                if df["Low"][row] < downtrend_low:
+                    downtrend_low = df["Low"][row]
+                    af = min(af + iaf, max_af)
+                if df["High"][row-1] > df[column_name][row]:
+                    df.loc[row, column_name] = df["High"][row-1]
+                if df["High"][row-2] > df[column_name][row]:
+                    df.loc[row, column_name] = df["High"][row-2]
+    df[column_name + " trend"] = np.where(df["uptrend"] == True,
+                                          "Uptrend",
+                                          "downtrend")
+    df.loc[0, column_name] = None
+    df.loc[1, column_name] = None
+    df.drop(["uptrend", "reverse"], axis=1, inplace=True)
     df[column_name] = df[column_name].round(2)
 
 
@@ -350,7 +408,7 @@ class Coin:
     def get_ohlc_data(self,
                       interval_minutes="1",
                       num_of_last_bars=0,
-                      **kwargs) -> DataFrame:
+                      **kwargs) -> pd.DataFrame:
         """Gets the coin's OHLC data
 
         Args:
@@ -373,11 +431,19 @@ class Coin:
         ohlc_data["DateTime"] = pd.to_datetime(
             ohlc_data["DateTime"], unit='s')
         indicators = ['sma', 'mfi', 'psl', 'chop', 'roc']
+        error = None
         for name in kwargs.items():
-            if ('indicator' in name[1]
-                    and 'period' in name[1]
-                    and name[1]['indicator'] in indicators):
+            if ('indicator' not in name[1]
+                    or name[1]['indicator'] not in indicators):
+                error = name
+                break
+            else:
+                # and 'period' in name[1]
+                # and name[1]['period'] > 0):
                 if name[1]['indicator'] == 'sma':
+                    if ('period' not in name[1] or name[1]['period'] < 0):
+                        error = name
+                        break
                     sma_indicator_data(ohlc_data, name[1]['period'], name[0])
                 if name[1]['indicator'] == 'mfi':
                     mfi_indicator_data(ohlc_data, name[1]['period'], name[0])
@@ -387,10 +453,10 @@ class Coin:
                     chop_indicator_data(ohlc_data, name[1]['period'], name[0])
                 if name[1]['indicator'] == 'roc':
                     roc_indicator_data(ohlc_data, name[1]['period'], name[0])
-            else:
-                raise Exception("krakentren-get_ohlc_data-Missing "
-                                "or faulty T.A. indicator elements: "
-                                + str(name))
+        if error != None:
+            raise Exception("krakentren- get_ohlc_data -Missing "
+                            "or faulty T.A. indicator elements: "
+                            + str(error))
         return ohlc_data[-num_of_last_bars:].reset_index(drop=True)
 
     def place_order(self, order_details={}):
