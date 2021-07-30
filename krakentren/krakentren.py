@@ -11,7 +11,7 @@ import hmac
 
 
 def round_down_decimals(number=float, decimals=int) -> float:
-    """Rounds float num down to requested decimal
+    """Rounds number down to requested decimal
 
     Args:
         number (float): Number to round down decimals
@@ -58,7 +58,7 @@ def contact_kraken(method,
             api_data = requests.get(api_url, params=parameters,
                                     timeout=timeout_sec)
         except Exception as error:
-            raise Exception('ApiError: ' + str(error))
+            raise Exception('krakentren ApiError: ' + str(error))
     elif method in api_private:
         api_method = "/0/private/" + method
         api_url = api_domain + api_method
@@ -79,12 +79,12 @@ def contact_kraken(method,
                                      data=api_postdata,
                                      timeout=timeout_sec)
         except Exception as error:
-            raise Exception('ApiError: ' + str(error))
+            raise Exception('krakentren ApiError: ' + str(error))
     api_data = api_data.json()
     if api_data["error"] == []:
         return api_data["result"]
     else:
-        raise Exception('ApiError: ' + str(api_data["error"]))
+        raise Exception('krakentren ApiError: ' + str(api_data["error"]))
 
 
 def get_server_time() -> dict:
@@ -118,8 +118,7 @@ def get_asset_pair_info(pair=str) -> dict:
 
 
 def get_account_balance(public_key=str, private_key=str) -> pd.DataFrame:
-    """Returns tuple with account's dict with all assets/amounts and
-    pandas dataframe with assets and estimated value
+    """Returns pandas dataframe of assets and estimated value
 
     Returns:
         Dataframe: Pandas dataframe with account's balance info
@@ -156,7 +155,7 @@ def get_order_info(txid=str, public_key=str, private_key=str) -> dict:
         txid (str): Order's id
 
     Returns:
-        dict: Dictionary with all order's info
+        dict: Dictionary with order's info
     """
     return contact_kraken("QueryOrders",
                           {"txid": txid, "trades": True},
@@ -171,7 +170,7 @@ def order_status(txid=str, public_key=str, private_key=str) -> str:
         txid (str): Order's id
 
     Returns:
-        str: Text of order's status
+        str: Order's status
     """
     return get_order_info(txid, public_key, private_key)[txid]['status']
 
@@ -290,8 +289,7 @@ def mfi_indicator_data(df=pd.DataFrame, period=int, column_name=str):
     df.drop(["Typical price", "Raw money flow",
              "Period compare", "positive_money_flow",
              "negative_money_flow", "money_flow_ratio"], axis=1, inplace=True)
-    # Remove most recent value
-    df[column_name] = df[column_name].shift(1)
+    df[column_name] = df[column_name].shift(1)  # Remove most recent value
     df[column_name] = df[column_name].round(2)
 
 
@@ -356,7 +354,6 @@ def psar_indicator_data(df=pd.DataFrame, iaf=float, max_af=float, column_name=st
                     df.loc[row, column_name] = df["Low"][row-1]
                 if df["Low"][row-2] < df[column_name][row]:
                     df.loc[row, column_name] = df["Low"][row-2]
-
         else:  # Calculate downtrend psar
             df.loc[row, column_name] = (df[column_name][row-1]
                                         + af
@@ -430,7 +427,7 @@ class Coin:
                              "Close price", "vwap", "volume", "count"]
         ohlc_data["DateTime"] = pd.to_datetime(
             ohlc_data["DateTime"], unit='s')
-        indicators = ['sma', 'mfi', 'psl', 'chop', 'roc']
+        indicators = ['sma', 'mfi', 'psl', 'chop', 'roc', 'psar']
         error = None
         for name in kwargs.items():
             if ('indicator' not in name[1]
@@ -444,13 +441,37 @@ class Coin:
                         break
                     sma_indicator_data(ohlc_data, name[1]['period'], name[0])
                 if name[1]['indicator'] == 'mfi':
+                    if ('period' not in name[1] or name[1]['period'] < 0):
+                        error = name
+                        break
                     mfi_indicator_data(ohlc_data, name[1]['period'], name[0])
                 if name[1]['indicator'] == 'psl':
+                    if ('period' not in name[1] or name[1]['period'] < 0):
+                        error = name
+                        break
                     psl_indicator_data(ohlc_data, name[1]['period'], name[0])
                 if name[1]['indicator'] == 'chop':
+                    if ('period' not in name[1] or name[1]['period'] < 0):
+                        error = name
+                        break
                     chop_indicator_data(ohlc_data, name[1]['period'], name[0])
                 if name[1]['indicator'] == 'roc':
+                    if ('period' not in name[1] or name[1]['period'] < 0):
+                        error = name
+                        break
                     roc_indicator_data(ohlc_data, name[1]['period'], name[0])
+                if name[1]['indicator'] == 'psar':
+                    if ('af' not in name[1]
+                            or 'max_af' not in name[1]
+                            or name[1]['af'] < 0
+                            or name[1]['max_af'] < 0
+                            or name[1]['af'] > 0.5
+                            or name[1]['max_af'] > 0.5):
+                        error = name
+                        break
+                    psar_indicator_data(ohlc_data, name[1]['af'],
+                                        name[1]['max_af'],
+                                        name[0])
         if error != None:
             raise Exception("krakentren- get_ohlc_data -Missing "
                             "or faulty T.A. indicator elements: "
