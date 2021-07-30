@@ -438,8 +438,6 @@ class Coin:
                 error = name
                 break
             else:
-                # and 'period' in name[1]
-                # and name[1]['period'] > 0):
                 if name[1]['indicator'] == 'sma':
                     if ('period' not in name[1] or name[1]['period'] < 0):
                         error = name
