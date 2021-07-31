@@ -383,6 +383,58 @@ def psar_indicator_data(df=pd.DataFrame, iaf=float, max_af=float, column_name=st
     df[column_name] = df[column_name].round(2)
 
 
+def add_ta(ohlc_data, **kwargs):
+    indicators = ['sma', 'mfi', 'psl', 'chop', 'roc', 'psar']
+    error = None
+    for name in kwargs.items():
+        if ('indicator' not in name[1]
+                or name[1]['indicator'] not in indicators):
+            error = name
+            break
+        else:
+            if name[1]['indicator'] == 'sma':
+                if ('period' not in name[1] or name[1]['period'] < 0):
+                    error = name
+                    break
+                sma_indicator_data(ohlc_data, name[1]['period'], name[0])
+            if name[1]['indicator'] == 'mfi':
+                if ('period' not in name[1] or name[1]['period'] < 0):
+                    error = name
+                    break
+                mfi_indicator_data(ohlc_data, name[1]['period'], name[0])
+            if name[1]['indicator'] == 'psl':
+                if ('period' not in name[1] or name[1]['period'] < 0):
+                    error = name
+                    break
+                psl_indicator_data(ohlc_data, name[1]['period'], name[0])
+            if name[1]['indicator'] == 'chop':
+                if ('period' not in name[1] or name[1]['period'] < 0):
+                    error = name
+                    break
+                chop_indicator_data(ohlc_data, name[1]['period'], name[0])
+            if name[1]['indicator'] == 'roc':
+                if ('period' not in name[1] or name[1]['period'] < 0):
+                    error = name
+                    break
+                roc_indicator_data(ohlc_data, name[1]['period'], name[0])
+            if name[1]['indicator'] == 'psar':
+                if ('af' not in name[1]
+                        or 'max_af' not in name[1]
+                        or name[1]['af'] < 0
+                        or name[1]['max_af'] < 0
+                        or name[1]['af'] > 0.5
+                        or name[1]['max_af'] > 0.5):
+                    error = name
+                    break
+                psar_indicator_data(ohlc_data, name[1]['af'],
+                                    name[1]['max_af'],
+                                    name[0])
+    if error != None:
+        raise Exception("krakentren- add_ta -Missing "
+                        "or faulty T.A. indicator elements: "
+                        + str(error))
+
+
 class Coin:
     def __init__(self, pair=str):
         """Creates instance of treadable asset, example: XBT/EUR,
@@ -402,10 +454,7 @@ class Coin:
         """
         return contact_kraken("Ticker", {"pair": self.pair})[self.pair]
 
-    def get_ohlc_data(self,
-                      interval_minutes="1",
-                      num_of_last_bars=0,
-                      **kwargs) -> pd.DataFrame:
+    def get_ohlc_data(self, interval_minutes="1", num_of_last_bars=0,) -> pd.DataFrame:
         """Gets the coin's OHLC data
 
         Args:
@@ -427,55 +476,6 @@ class Coin:
                              "Close price", "vwap", "volume", "count"]
         ohlc_data["DateTime"] = pd.to_datetime(
             ohlc_data["DateTime"], unit='s')
-        indicators = ['sma', 'mfi', 'psl', 'chop', 'roc', 'psar']
-        error = None
-        for name in kwargs.items():
-            if ('indicator' not in name[1]
-                    or name[1]['indicator'] not in indicators):
-                error = name
-                break
-            else:
-                if name[1]['indicator'] == 'sma':
-                    if ('period' not in name[1] or name[1]['period'] < 0):
-                        error = name
-                        break
-                    sma_indicator_data(ohlc_data, name[1]['period'], name[0])
-                if name[1]['indicator'] == 'mfi':
-                    if ('period' not in name[1] or name[1]['period'] < 0):
-                        error = name
-                        break
-                    mfi_indicator_data(ohlc_data, name[1]['period'], name[0])
-                if name[1]['indicator'] == 'psl':
-                    if ('period' not in name[1] or name[1]['period'] < 0):
-                        error = name
-                        break
-                    psl_indicator_data(ohlc_data, name[1]['period'], name[0])
-                if name[1]['indicator'] == 'chop':
-                    if ('period' not in name[1] or name[1]['period'] < 0):
-                        error = name
-                        break
-                    chop_indicator_data(ohlc_data, name[1]['period'], name[0])
-                if name[1]['indicator'] == 'roc':
-                    if ('period' not in name[1] or name[1]['period'] < 0):
-                        error = name
-                        break
-                    roc_indicator_data(ohlc_data, name[1]['period'], name[0])
-                if name[1]['indicator'] == 'psar':
-                    if ('af' not in name[1]
-                            or 'max_af' not in name[1]
-                            or name[1]['af'] < 0
-                            or name[1]['max_af'] < 0
-                            or name[1]['af'] > 0.5
-                            or name[1]['max_af'] > 0.5):
-                        error = name
-                        break
-                    psar_indicator_data(ohlc_data, name[1]['af'],
-                                        name[1]['max_af'],
-                                        name[0])
-        if error != None:
-            raise Exception("krakentren- get_ohlc_data -Missing "
-                            "or faulty T.A. indicator elements: "
-                            + str(error))
         return ohlc_data[-num_of_last_bars:].reset_index(drop=True)
 
     def place_order(self, order_details={}):
