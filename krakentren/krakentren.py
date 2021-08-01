@@ -422,8 +422,8 @@ def add_ta(ohlc_data, **kwargs):
                         or 'max_af' not in name[1]
                         or name[1]['af'] < 0
                         or name[1]['max_af'] < 0
-                        or name[1]['af'] > 0.5
-                        or name[1]['max_af'] > 0.5):
+                        or name[1]['af'] > 0.08
+                        or name[1]['max_af'] > 0.8):
                     error = name
                     break
                 psar_indicator_data(ohlc_data, name[1]['af'],

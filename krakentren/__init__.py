@@ -15,5 +15,6 @@ from .krakentren import (round_down_decimals,
                          order_price,
                          order_volume,
                          cancel_order,
+                         add_ta,
                          Coin
                          )
