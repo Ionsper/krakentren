@@ -387,8 +387,9 @@ def psar_indicator_data(queue, df=pd.DataFrame, iaf=float, max_af=float, column_
     df.loc[1, column_name] = None
     df.drop(["uptrend", "reverse"], axis=1, inplace=True)
     df[column_name] = df[column_name].round(2)
-    queue.put(df[column_name])
-    queue.put(df[column_name + " trend"])
+    queue.put(df[[column_name, column_name + " trend"]])
+    # queue.put(df[column_name])
+    # queue.put(df[column_name + " trend"])
 
 
 def add_ta(ohlc_data, **kwargs):
@@ -470,11 +471,14 @@ def add_ta(ohlc_data, **kwargs):
                 processes.append(prs)
     for process in processes:
         process.start()
+        ta_ind = queue.get()
+        if isinstance(ta_ind, pd.Series):
+            ohlc_data[str(ta_ind.name)] = ta_ind
+        elif isinstance(ta_ind, pd.DataFrame):
+            for column in ta_ind:
+                ohlc_data[str(column)] = ta_ind[column]
     for process in processes:
         process.join()
-        while not queue.empty():
-            series = queue.get()
-            ohlc_data.insert(1, str(series.name), series)
     if error != None:
         raise Exception("krakentren- add_ta -Missing "
                         "or faulty T.A. indicator elements: "
