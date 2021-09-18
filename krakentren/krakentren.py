@@ -11,7 +11,7 @@ import hashlib
 import hmac
 
 
-def round_down_decimals(number=float, decimals=int) -> float:
+def round_down_decimals(number: float, decimals: int) -> float:
     """Rounds number down to requested decimal
 
     Args:
@@ -106,7 +106,7 @@ def get_tradable_assets_pairs() -> list:
     return list(contact_kraken("AssetPairs"))
 
 
-def get_asset_pair_info(pair=str) -> dict:
+def get_asset_pair_info(pair: str) -> dict:
     """Gets selected pair's trading info
 
     Args:
@@ -118,7 +118,7 @@ def get_asset_pair_info(pair=str) -> dict:
     return contact_kraken("AssetPairs", {"pair=": pair})[pair]
 
 
-def get_account_balance(public_key=str, private_key=str) -> pd.DataFrame:
+def get_account_balance(public_key: str, private_key: str) -> pd.DataFrame:
     """Returns pandas dataframe of assets and estimated value
 
     Returns:
@@ -149,7 +149,7 @@ def get_account_balance(public_key=str, private_key=str) -> pd.DataFrame:
     return acount_df
 
 
-def get_order_info(txid=str, public_key=str, private_key=str) -> dict:
+def get_order_info(txid: str, public_key: str, private_key: str) -> dict:
     """Gets selected order's info
 
     Args:
@@ -164,7 +164,7 @@ def get_order_info(txid=str, public_key=str, private_key=str) -> dict:
                           private_key)
 
 
-def order_status(txid=str, public_key=str, private_key=str) -> str:
+def order_status(txid: str, public_key: str, private_key: str) -> str:
     """Gets selected order's status
 
     Args:
@@ -176,7 +176,7 @@ def order_status(txid=str, public_key=str, private_key=str) -> str:
     return get_order_info(txid, public_key, private_key)[txid]['status']
 
 
-def trade_fee(order_txid=str, public_key=str, private_key=str) -> float:
+def trade_fee(order_txid: str, public_key: str, private_key: str) -> float:
     """Gets the total fee paid for the trade associated with the
     selected order
 
@@ -198,7 +198,7 @@ def trade_fee(order_txid=str, public_key=str, private_key=str) -> float:
     return trade_fee
 
 
-def trade_cost(order_txid=str, public_key=str, private_key=str) -> float:
+def trade_cost(order_txid: str, public_key: str, private_key: str) -> float:
     """"Gets the total cost for the trade associated with the
     selected order
 
@@ -220,7 +220,7 @@ def trade_cost(order_txid=str, public_key=str, private_key=str) -> float:
     return trade_cost
 
 
-def order_price(txid=str, public_key=str, private_key=str) -> float:
+def order_price(txid: str, public_key: str, private_key: str) -> float:
     """Gets the order's price
 
     Args:
@@ -232,7 +232,7 @@ def order_price(txid=str, public_key=str, private_key=str) -> float:
     return float(get_order_info(txid, public_key, private_key)[txid]['price'])
 
 
-def order_volume(txid=str, public_key=str, private_key=str) -> float:
+def order_volume(txid: str, public_key: str, private_key: str) -> float:
     """Gets the order's volume
 
     Args:
@@ -244,7 +244,7 @@ def order_volume(txid=str, public_key=str, private_key=str) -> float:
     return float(get_order_info(txid, public_key, private_key)[txid]['vol'])
 
 
-def cancel_order(txid=str, public_key=str, private_key=str):
+def cancel_order(txid: str, public_key: str, private_key: str):
     """Cancel an open order
 
     Args:
@@ -256,13 +256,13 @@ def cancel_order(txid=str, public_key=str, private_key=str):
                    private_key)
 
 
-def sma_indicator_data(queue, df=pd.DataFrame, period=int, column_name=str):
+def sma_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     df[column_name] = df["Close price"].rolling(window=period).mean()
     df[column_name] = df[column_name].round(2)
     queue.put(df[column_name])
 
 
-def mfi_indicator_data(queue, df=pd.DataFrame, period=int, column_name=str):
+def mfi_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     # Calculates Typical price for every row
     df["Typical price"] = (df["High"] + df["Low"] + df["Close price"]) / 3
     # Calculates if period has positive or negative flow
@@ -296,7 +296,7 @@ def mfi_indicator_data(queue, df=pd.DataFrame, period=int, column_name=str):
     queue.put(df[column_name])
 
 
-def psl_indicator_data(queue, df=pd.DataFrame, period=int, column_name=str):
+def psl_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     df["bar_price_compare"] = np.where(
         df["Close price"] > df["Close price"].shift(1), 1, 0)
     df[column_name] = (df["bar_price_compare"].rolling(
@@ -306,7 +306,7 @@ def psl_indicator_data(queue, df=pd.DataFrame, period=int, column_name=str):
     queue.put(df[column_name])
 
 
-def chop_indicator_data(queue, df=pd.DataFrame, period=int, column_name=str):
+def chop_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     # calculate True range
     df["tr1"] = df["High"] - df["Low"]
     df["tr2"] = abs(df["High"] - df["Close price"].shift(1))
@@ -324,14 +324,14 @@ def chop_indicator_data(queue, df=pd.DataFrame, period=int, column_name=str):
     queue.put(df[column_name])
 
 
-def roc_indicator_data(queue, df=pd.DataFrame, period=int, column_name=str):
+def roc_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     df[column_name] = df["Close price"] / df["Close price"].shift(period-1)
     df[column_name] = (df[column_name] * 100) - 100
     df[column_name] = df[column_name].round(2)
     queue.put(df[column_name])
 
 
-def psar_indicator_data(queue, df=pd.DataFrame, iaf=float, max_af=float, column_name=str):
+def psar_indicator_data(queue, df: pd.DataFrame, iaf: float, max_af: float, column_name: str):
     af = iaf
     df["uptrend"] = None
     df["reverse"] = False
@@ -484,7 +484,7 @@ def add_ta(ohlc_data, **kwargs):
 
 
 class Coin:
-    def __init__(self, pair=str):
+    def __init__(self, pair: str):
         """Creates instance of treadable asset, example: XBT/EUR,
         in order to trade or receive info
 
@@ -526,18 +526,22 @@ class Coin:
             ohlc_data["DateTime"], unit='s')
         return ohlc_data[-num_of_last_bars:].reset_index(drop=True)
 
-    def place_order(self, order_details={}):
-        """Places trading orders
+    def place_order(self, order_details: dict, public_key: str, private_key: str) -> str:
+        """Places trade orders
 
         Args:
-            order_details (dict, optional): Dict of order parameters.
-            Defaults to {}.
+            order_details (dict): Dict of order parameters.
+            public_key (str): Kraken API public key
+            private_key (str): Kraken API private key
 
         Returns:
-            str: Order's transaction id in case of successfull placement
+            str: str: Order's transaction id in case of successfull placement
         """
         order_details["pair"] = self.pair
-        order = contact_kraken("AddOrder", order_details)
+        order = contact_kraken("AddOrder",
+                               order_details,
+                               public_key,
+                               private_key)
         if "validate" in order_details:
             return order
         else:
