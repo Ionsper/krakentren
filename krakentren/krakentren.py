@@ -388,8 +388,6 @@ def psar_indicator_data(queue, df=pd.DataFrame, iaf=float, max_af=float, column_
     df.drop(["uptrend", "reverse"], axis=1, inplace=True)
     df[column_name] = df[column_name].round(2)
     queue.put(df[[column_name, column_name + " trend"]])
-    # queue.put(df[column_name])
-    # queue.put(df[column_name + " trend"])
 
 
 def add_ta(ohlc_data, **kwargs):
