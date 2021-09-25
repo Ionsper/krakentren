@@ -8,6 +8,6 @@ setup(name="krakentren",
       author_email="ionsper@outlook.com",
       license="MIT",
       packages=["krakentren"],
-      install_requires=["numpy == 1.16.0",
+      install_requires=["numpy == 1.17.4",
                         "pandas == 1.1.4",
                         "requests == 2.25.0"])

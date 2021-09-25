@@ -1,6 +1,6 @@
 """ Kraken_trade_enhancer """
 from math import floor, log10
-from time import sleep, time
+from time import time
 from urllib.parse import urlencode
 import pandas as pd
 import numpy as np
@@ -101,7 +101,7 @@ def get_tradable_assets_pairs() -> list:
     """Gets all tradable crypto pairs
 
     Returns:
-        dict_keys: Pair names
+        list: Pair names
     """
     return list(contact_kraken("AssetPairs"))
 
@@ -257,12 +257,32 @@ def cancel_order(txid: str, public_key: str, private_key: str):
 
 
 def sma_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
+    """Simple Moving Average
+    Adds simple moving average series to the Dataframe
+    https://www.investopedia.com/terms/m/movingaverage.asp
+
+    Args:
+        queue (method): multiprocessing.queue 
+        df (pd.DataFrame): ohlc data Dataframe
+        period (int): simple moving average period
+        column_name (str): name on Dataframe column
+    """
     df[column_name] = df["Close price"].rolling(window=period).mean()
     df[column_name] = df[column_name].round(2)
     queue.put(df[column_name])
 
 
 def mfi_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
+    """Money Flow Index
+    Adds money flow index series to the Dataframe
+    https://www.investopedia.com/terms/m/mfi.asp
+
+    Args:
+        queue (method): multiprocessing.queue
+        df (pd.DataFrame): ohlc data Dataframe
+        period (int): money flow index period
+        column_name (str): name on Dataframe column
+    """
     # Calculates Typical price for every row
     df["Typical price"] = (df["High"] + df["Low"] + df["Close price"]) / 3
     # Calculates if period has positive or negative flow
@@ -297,6 +317,16 @@ def mfi_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
 
 
 def psl_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
+    """Psychological Line
+    Adds psychological line series to the Dataframe
+    https://library.tradingtechnologies.com/trade/chrt-ti-psychological-line.html
+
+    Args:
+        queue (method): multiprocessing.queue
+        df (pd.DataFrame): ohlc data Dataframe
+        period (int): psychological line period
+        column_name (str): name on Dataframe column
+    """
     df["bar_price_compare"] = np.where(
         df["Close price"] > df["Close price"].shift(1), 1, 0)
     df[column_name] = (df["bar_price_compare"].rolling(
@@ -307,6 +337,16 @@ def psl_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
 
 
 def chop_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
+    """Choppiness Index
+    Adds choppiness index series to the Dataframe
+    https://www.motivewave.com/studies/choppiness_index.htm
+
+    Args:
+        queue (method): multiprocessing.queue
+        df (pd.DataFrame): ohlc data Dataframe
+        period (int): choppiness index period
+        column_name (str): name on Dataframe column
+    """
     # calculate True range
     df["tr1"] = df["High"] - df["Low"]
     df["tr2"] = abs(df["High"] - df["Close price"].shift(1))
@@ -325,6 +365,16 @@ def chop_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
 
 
 def roc_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
+    """Price Rate Of Change Indicator
+    Adds price rate of change series to the Dataframe
+    https://www.investopedia.com/terms/p/pricerateofchange.asp
+
+    Args:
+        queue (method): multiprocessing.queue
+        df (pd.DataFrame): ohlc data Dataframe
+        period (int): price rate of change period
+        column_name (str): name on Dataframe column
+    """
     df[column_name] = df["Close price"] / df["Close price"].shift(period-1)
     df[column_name] = (df[column_name] * 100) - 100
     df[column_name] = df[column_name].round(2)
@@ -332,6 +382,17 @@ def roc_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
 
 
 def psar_indicator_data(queue, df: pd.DataFrame, iaf: float, max_af: float, column_name: str):
+    """Parabolic SAR
+    Adds parabolic SAR series to the Dataframe
+    https://www.investopedia.com/trading/introduction-to-parabolic-sar/
+
+    Args:
+        queue (method): multiprocessing.queue
+        df (pd.DataFrame): ohlc data Dataframe
+        iaf (float): initial value
+        max_af (float): max af value
+        column_name (str): name on Dataframe column
+    """
     af = iaf
     df["uptrend"] = None
     df["reverse"] = False
@@ -391,6 +452,11 @@ def psar_indicator_data(queue, df: pd.DataFrame, iaf: float, max_af: float, colu
 
 
 def add_ta(ohlc_data, **kwargs):
+    """Adds technical data indicators to the ohlc data Dataframe
+
+    Args:
+        ohlc_data (Dataframe): ohlc data Dataframe
+    """
     indicators = ['sma', 'mfi', 'psl', 'chop', 'roc', 'psar']
     error = None
     queue = mp.Queue()
@@ -484,6 +550,9 @@ def add_ta(ohlc_data, **kwargs):
 
 
 class Coin:
+    """Creates trade pair objects
+    """
+
     def __init__(self, pair: str):
         """Creates instance of treadable asset, example: XBT/EUR,
         in order to trade or receive info
