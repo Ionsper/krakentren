@@ -6,7 +6,7 @@ A python package to interact with Kraken.com REST API.
 
 ## Use
 
-The package contacts Kraken's REST API in order to get market data, trade and has many other features.
+The package contacts Kraken's REST API in order to get market data and trade.
 
 It can also add several trading tecnhical indicators to the ohlc data received by the api.
 
