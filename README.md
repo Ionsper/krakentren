@@ -14,12 +14,12 @@ It can also add several trading tecnhical indicators to the ohlc data received b
 
 ## Dependencies - Installation
 
-I recommend using a virtual environment [(like venv)](https://docs.python.org/3/library/venv.html) to install/run the bot.
+I recommend using a virtual environment [(like venv)](https://docs.python.org/3/library/venv.html) to install/run the package.
 
 To install, type:
 
  ```console
-test@debian:~$ pip install krakentren
+test@something:~$ pip install krakentren
 ```
 
 ***

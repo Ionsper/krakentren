@@ -1,4 +1,4 @@
-from setuptools import _install_setup_requires, setup
+from setuptools import setup
 
 setup(name="krakentren",
       version="0.1.0",
