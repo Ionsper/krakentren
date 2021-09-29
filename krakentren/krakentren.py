@@ -262,7 +262,7 @@ def sma_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     https://www.investopedia.com/terms/m/movingaverage.asp
 
     Args:
-        queue (method): multiprocessing.queue 
+        queue (method): multiprocessing.queue
         df (pd.DataFrame): ohlc data Dataframe
         period (int): simple moving average period
         column_name (str): name on Dataframe column
@@ -379,6 +379,17 @@ def roc_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     df[column_name] = (df[column_name] * 100) - 100
     df[column_name] = df[column_name].round(2)
     queue.put(df[column_name])
+
+
+def adl_indicator_data(df: pd.DataFrame, column_name: str):
+    df["mfm"] = ((df["Close price"] - df["Low"])
+                 - (df["High"] - df["Close price"]))
+    df["mfm"] = df["mfm"] / (df["High"] - df["Low"])
+    df["mfm"] = df["mfm"] * df["volume"]
+    df["mfm"] = df["mfm"].round(2)
+    df[column_name] = df["mfm"]
+    for row in range(1, len(df)):
+        df.loc[row, column_name] = df[column_name][row-1] + df["mfm"][row]
 
 
 def psar_indicator_data(queue, df: pd.DataFrame, iaf: float, max_af: float, column_name: str):
