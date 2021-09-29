@@ -381,15 +381,23 @@ def roc_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     queue.put(df[column_name])
 
 
-def adl_indicator_data(df: pd.DataFrame, column_name: str):
-    df["mfm"] = ((df["Close price"] - df["Low"])
-                 - (df["High"] - df["Close price"]))
-    df["mfm"] = df["mfm"] / (df["High"] - df["Low"])
-    df["mfm"] = df["mfm"] * df["volume"]
-    df["mfm"] = df["mfm"].round(2)
-    df[column_name] = df["mfm"]
-    for row in range(1, len(df)):
-        df.loc[row, column_name] = df[column_name][row-1] + df["mfm"][row]
+def adl_indicator_data(queue, df: pd.DataFrame, column_name: str):
+    """Accumulation/Distribution Indicator
+    Adds accumulation/distribution indicator series to the Dataframe
+    https://www.investopedia.com/terms/a/accumulationdistribution.asp
+
+    Args:
+        queue (method): multiprocessing.queue
+        df (pd.DataFrame): ohlc data Dataframe
+        column_name (str): name on Dataframe column
+    """
+
+    df[column_name] = ((df["Close price"] - df["Low"])
+                       - (df["High"] - df["Close price"]))
+    df[column_name] = df[column_name] / (df["High"] - df["Low"])
+    df[column_name] = (df[column_name] * df["volume"]).cumsum()
+    df[column_name] = df[column_name].round(3)
+    queue.put(df[column_name])
 
 
 def psar_indicator_data(queue, df: pd.DataFrame, iaf: float, max_af: float, column_name: str):
@@ -468,7 +476,7 @@ def add_ta(ohlc_data, **kwargs):
     Args:
         ohlc_data (Dataframe): ohlc data Dataframe
     """
-    indicators = ['sma', 'mfi', 'psl', 'chop', 'roc', 'psar']
+    indicators = ['sma', 'mfi', 'psl', 'chop', 'roc', 'adl', 'psar']
     error = None
     queue = mp.Queue()
     processes = []
@@ -526,6 +534,12 @@ def add_ta(ohlc_data, **kwargs):
                                  args=(queue,
                                        ohlc_data,
                                        name[1]['period'],
+                                       name[0],))
+                processes.append(prs)
+            if name[1]['indicator'] == 'adl':
+                prs = mp.Process(target=adl_indicator_data,
+                                 args=(queue,
+                                       ohlc_data,
                                        name[0],))
                 processes.append(prs)
             if name[1]['indicator'] == 'psar':
