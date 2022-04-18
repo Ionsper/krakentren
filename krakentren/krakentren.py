@@ -2,13 +2,14 @@
 from math import floor, log10
 from time import time
 from urllib.parse import urlencode
-import pandas as pd
-import numpy as np
+from sys import float_info
 import multiprocessing as mp
-import requests
 import base64
 import hashlib
 import hmac
+import numpy as np
+import pandas as pd
+import requests
 
 
 def round_down_decimals(number: float, decimals: int) -> float:
@@ -26,7 +27,7 @@ def round_down_decimals(number: float, decimals: int) -> float:
 
 
 def contact_kraken(method,
-                   parameters={},
+                   parameters: dict = None,
                    public_key="",
                    private_key=""
                    ) -> dict:
@@ -59,7 +60,7 @@ def contact_kraken(method,
             api_data = requests.get(api_url, params=parameters,
                                     timeout=timeout_sec)
         except Exception as error:
-            raise Exception('krakentren ApiError: ' + str(error))
+            raise Exception('krakentren ApiError: ' + str(error)) from error
     elif method in api_private:
         api_method = "/0/private/" + method
         api_url = api_domain + api_method
@@ -80,7 +81,7 @@ def contact_kraken(method,
                                      data=api_postdata,
                                      timeout=timeout_sec)
         except Exception as error:
-            raise Exception('krakentren ApiError: ' + str(error))
+            raise Exception('krakentren ApiError: ' + str(error)) from error
     api_data = api_data.json()
     if api_data["error"] == []:
         return api_data["result"]
@@ -194,8 +195,8 @@ def trade_fee(order_txid: str, public_key: str, private_key: str) -> float:
                            public_key,
                            private_key)
     trade_id = list(trade.keys())[0]
-    trade_fee = float(trade[trade_id]["fee"])
-    return trade_fee
+    fee = float(trade[trade_id]["fee"])
+    return fee
 
 
 def trade_cost(order_txid: str, public_key: str, private_key: str) -> float:
@@ -216,8 +217,8 @@ def trade_cost(order_txid: str, public_key: str, private_key: str) -> float:
                            public_key,
                            private_key)
     trade_id = list(trade.keys())[0]
-    trade_cost = float(trade[trade_id]["cost"])
-    return trade_cost
+    cost = float(trade[trade_id]["cost"])
+    return cost
 
 
 def order_price(txid: str, public_key: str, private_key: str) -> float:
@@ -394,9 +395,13 @@ def adl_indicator_data(queue, df: pd.DataFrame, column_name: str):
 
     df[column_name] = ((df["Close price"] - df["Low"])
                        - (df["High"] - df["Close price"]))
-    df[column_name] = df[column_name] / (df["High"] - df["Low"])
+    # To avoid dividing by zero
+    df["diff"] = np.where((df["High"] - df["Low"]) == 0,
+                          float_info.epsilon, (df["High"] - df["Low"]))
+    df[column_name] = df[column_name] / df["diff"]
     df[column_name] = (df[column_name] * df["volume"]).cumsum()
     df[column_name] = df[column_name].round(3)
+    df.drop(["diff"], axis=1, inplace=True)
     queue.put(df[column_name])
 
 
