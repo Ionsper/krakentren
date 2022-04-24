@@ -132,17 +132,19 @@ def get_account_balance(public_key: str, private_key: str) -> pd.DataFrame:
                              private_key)
     account_dict = {}
     sum_acc = 0
+    pair = None
     for key in account.keys():
         if key != "ZEUR":
             if key + "ZEUR" in pairs:
                 pair = str(key + "ZEUR")
             elif key + "EUR" in pairs:
                 pair = str(key + "EUR")
-            price = contact_kraken("Ticker", {"pair": pair})[pair]["b"][0]
-            amount = round_down_decimals(float(account[key]), 5)
-            value = round_down_decimals(float(price) * amount, 2)
-            account_dict[key + "EUR"] = {"amount": amount, "value": value}
-            sum_acc += value
+            if pair is not None:
+                price = contact_kraken("Ticker", {"pair": pair})[pair]["b"][0]
+                amount = round_down_decimals(float(account[key]), 5)
+                value = round_down_decimals(float(price) * amount, 2)
+                account_dict[key + "EUR"] = {"amount": amount, "value": value}
+                sum_acc += value
     account_dict["Total asssets value"] = round_down_decimals(sum_acc, 2)
     account_dict["EUR"] = round_down_decimals(float(account["ZEUR"]), 2)
     acount_df = pd.DataFrame.from_dict(account_dict)
@@ -293,8 +295,7 @@ def mfi_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     # Calculates Raw money flow for every row
     df["Raw money flow"] = df["Typical price"] * df["volume"]
     # Calculates positive money_flow for every row
-    df["positive_money_flow"] = df[df['Period compare']
-                                   != -1]['Raw money flow']
+    df["positive_money_flow"] = df[df['Period compare'] != -1]['Raw money flow']
     df["positive_money_flow"].fillna(0, inplace=True)
     df["positive_money_flow"] = df["positive_money_flow"].rolling(
         window=period).sum()
