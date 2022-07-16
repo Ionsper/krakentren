@@ -611,6 +611,8 @@ class Coin:
             Defaults to "1".
             date_conv (optional): If True converts timestab
             Defaults to True
+            since (float,optional): unix timestab to get data since
+            Defaults to 0
             num_of_last_bars (int, optional): Bars to return
             0 value returns last 720 bars. Defaults to 0.
 
