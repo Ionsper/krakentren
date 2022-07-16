@@ -602,12 +602,15 @@ class Coin:
         """
         return contact_kraken("Ticker", {"pair": self.pair})[self.pair]
 
-    def get_ohlc_data(self, interval_minutes="1", num_of_last_bars=0,) -> pd.DataFrame:
+    def get_ohlc_data(self, interval_minutes="1", date_conv=True,
+                      num_of_last_bars=0) -> pd.DataFrame:
         """Gets the coin's OHLC data
 
         Args:
             interval_minutes (str, optional): OHLC interval.
             Defaults to "1".
+            date_conv (optional): If True converts timestab
+            Defaults to True
             num_of_last_bars (int, optional): Bars to return
             0 value returns last 720 bars. Defaults to 0.
 
@@ -622,8 +625,9 @@ class Coin:
             ohlc_data).astype(float).round(5)
         ohlc_data.columns = ["DateTime", "Open price", "High", "Low",
                              "Close price", "vwap", "volume", "count"]
-        ohlc_data["DateTime"] = pd.to_datetime(
-            ohlc_data["DateTime"], unit='s')
+        if date_conv:
+            ohlc_data["DateTime"] = pd.to_datetime(
+                ohlc_data["DateTime"], unit='s')
         return ohlc_data[-num_of_last_bars:].reset_index(drop=True)
 
     def place_order(self, order_details: dict, public_key: str, private_key: str) -> str:
