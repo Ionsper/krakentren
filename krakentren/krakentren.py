@@ -603,7 +603,7 @@ class Coin:
         return contact_kraken("Ticker", {"pair": self.pair})[self.pair]
 
     def get_ohlc_data(self, interval_minutes="1", date_conv=True,
-                      num_of_last_bars=0) -> pd.DataFrame:
+                      since=0, num_of_last_bars=0) -> pd.DataFrame:
         """Gets the coin's OHLC data
 
         Args:
@@ -617,10 +617,12 @@ class Coin:
         Returns:
             pandas Dataframe: Pandas Dataframe with OHLC data
         """
-        ohlc_data = contact_kraken("OHLC",
-                                   {"pair": self.pair,
-                                    "interval": str(interval_minutes)
-                                    })[self.pair]
+        if since != 0:
+            info = {"pair": self.pair, "interval": str(interval_minutes),
+                    "since": str(since)}
+        else:
+            info = {"pair": self.pair, "interval": str(interval_minutes)}
+        ohlc_data = contact_kraken("OHLC", info)[self.pair]
         ohlc_data = pd.DataFrame.from_dict(
             ohlc_data).astype(float).round(5)
         ohlc_data.columns = ["DateTime", "Open price", "High", "Low",
