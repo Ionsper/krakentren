@@ -3,7 +3,6 @@ from math import floor, log10
 from time import time
 from urllib.parse import urlencode
 from sys import float_info
-import multiprocessing as mp
 import base64
 import hashlib
 import hmac
@@ -259,7 +258,7 @@ def cancel_order(txid: str, public_key: str, private_key: str):
                    private_key)
 
 
-def sma_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
+def sma_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     """Simple Moving Average
     Adds simple moving average series to the Dataframe
     https://www.investopedia.com/terms/m/movingaverage.asp
@@ -272,10 +271,9 @@ def sma_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     """
     df[column_name] = df["Close price"].rolling(window=period).mean()
     df[column_name] = df[column_name].round(2)
-    queue.put(df[column_name])
 
 
-def mfi_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
+def mfi_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     """Money Flow Index
     Adds money flow index series to the Dataframe
     https://www.investopedia.com/terms/m/mfi.asp
@@ -315,10 +313,9 @@ def mfi_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
              "negative_money_flow", "money_flow_ratio"], axis=1, inplace=True)
     df[column_name] = df[column_name].shift(1)  # Remove most recent value
     df[column_name] = df[column_name].round(2)
-    queue.put(df[column_name])
 
 
-def psl_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
+def psl_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     """Psychological Line
     Adds psychological line series to the Dataframe
     https://library.tradingtechnologies.com/trade/chrt-ti-psychological-line.html
@@ -335,10 +332,9 @@ def psl_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
         window=period).sum() / period) * 100
     df.drop("bar_price_compare", axis=1, inplace=True)
     df[column_name] = df[column_name].round(2)
-    queue.put(df[column_name])
 
 
-def chop_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
+def chop_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     """Choppiness Index
     Adds choppiness index series to the Dataframe
     https://www.motivewave.com/studies/choppiness_index.htm
@@ -363,10 +359,9 @@ def chop_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     df.drop(["tr1", "tr2", "tr3", "TR SUM", "CHOP1",
             "True range"], axis=1, inplace=True)
     df[column_name] = df[column_name].round(2)
-    queue.put(df[column_name])
 
 
-def roc_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
+def roc_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     """Price Rate Of Change Indicator
     Adds price rate of change series to the Dataframe
     https://www.investopedia.com/terms/p/pricerateofchange.asp
@@ -380,10 +375,9 @@ def roc_indicator_data(queue, df: pd.DataFrame, period: int, column_name: str):
     df[column_name] = df["Close price"] / df["Close price"].shift(period-1)
     df[column_name] = (df[column_name] * 100) - 100
     df[column_name] = df[column_name].round(2)
-    queue.put(df[column_name])
 
 
-def adl_indicator_data(queue, df: pd.DataFrame, column_name: str):
+def adl_indicator_data(df: pd.DataFrame, column_name: str):
     """Accumulation/Distribution Indicator
     Adds accumulation/distribution indicator series to the Dataframe
     https://www.investopedia.com/terms/a/accumulationdistribution.asp
@@ -403,10 +397,9 @@ def adl_indicator_data(queue, df: pd.DataFrame, column_name: str):
     df[column_name] = (df[column_name] * df["volume"]).cumsum()
     df[column_name] = df[column_name].round(3)
     df.drop(["diff"], axis=1, inplace=True)
-    queue.put(df[column_name])
 
 
-def psar_indicator_data(queue, df: pd.DataFrame, iaf: float, max_af: float, column_name: str):
+def psar_indicator_data(df: pd.DataFrame, iaf: float, max_af: float, column_name: str):
     """Parabolic SAR
     Adds parabolic SAR series to the Dataframe
     https://www.investopedia.com/trading/introduction-to-parabolic-sar/
@@ -473,7 +466,6 @@ def psar_indicator_data(queue, df: pd.DataFrame, iaf: float, max_af: float, colu
     df.loc[1, column_name] = None
     df.drop(["uptrend", "reverse"], axis=1, inplace=True)
     df[column_name] = df[column_name].round(2)
-    queue.put(df[[column_name, column_name + " trend"]])
 
 
 def add_ta(ohlc_data, **kwargs):
@@ -484,8 +476,6 @@ def add_ta(ohlc_data, **kwargs):
     """
     indicators = ['sma', 'mfi', 'psl', 'chop', 'roc', 'adl', 'psar']
     error = None
-    queue = mp.Queue()
-    processes = []
     for name in kwargs.items():
         if ('indicator' not in name[1]
                 or name[1]['indicator'] not in indicators):
@@ -496,58 +486,29 @@ def add_ta(ohlc_data, **kwargs):
                 if ('period' not in name[1] or name[1]['period'] < 0):
                     error = name
                     break
-                prs = mp.Process(target=sma_indicator_data,
-                                 args=(queue,
-                                       ohlc_data,
-                                       name[1]['period'],
-                                       name[0],))
-                processes.append(prs)
+                sma_indicator_data(ohlc_data, name[1]['period'], name[0])
             if name[1]['indicator'] == 'mfi':
                 if ('period' not in name[1] or name[1]['period'] < 0):
                     error = name
                     break
-                prs = mp.Process(target=mfi_indicator_data,
-                                 args=(queue,
-                                       ohlc_data,
-                                       name[1]['period'],
-                                       name[0],))
-                processes.append(prs)
+                mfi_indicator_data(ohlc_data, name[1]['period'], name[0])
             if name[1]['indicator'] == 'psl':
                 if ('period' not in name[1] or name[1]['period'] < 0):
                     error = name
                     break
-                prs = mp.Process(target=psl_indicator_data,
-                                 args=(queue,
-                                       ohlc_data,
-                                       name[1]['period'],
-                                       name[0],))
-                processes.append(prs)
+                psl_indicator_data(ohlc_data, name[1]['period'], name[0])
             if name[1]['indicator'] == 'chop':
                 if ('period' not in name[1] or name[1]['period'] < 0):
                     error = name
                     break
-                prs = mp.Process(target=chop_indicator_data,
-                                 args=(queue,
-                                       ohlc_data,
-                                       name[1]['period'],
-                                       name[0],))
-                processes.append(prs)
+                chop_indicator_data(ohlc_data, name[1]['period'], name[0])
             if name[1]['indicator'] == 'roc':
                 if ('period' not in name[1] or name[1]['period'] < 0):
                     error = name
                     break
-                prs = mp.Process(target=roc_indicator_data,
-                                 args=(queue,
-                                       ohlc_data,
-                                       name[1]['period'],
-                                       name[0],))
-                processes.append(prs)
+                roc_indicator_data(ohlc_data, name[1]['period'], name[0])
             if name[1]['indicator'] == 'adl':
-                prs = mp.Process(target=adl_indicator_data,
-                                 args=(queue,
-                                       ohlc_data,
-                                       name[0],))
-                processes.append(prs)
+                adl_indicator_data(ohlc_data, name[0])
             if name[1]['indicator'] == 'psar':
                 if ('af' not in name[1]
                         or 'max_af' not in name[1]
@@ -557,24 +518,9 @@ def add_ta(ohlc_data, **kwargs):
                         or name[1]['max_af'] > 0.8):
                     error = name
                     break
-                prs = mp.Process(target=psar_indicator_data,
-                                 args=(queue,
-                                       ohlc_data,
-                                       name[1]['af'],
-                                       name[1]['max_af'],
-                                       name[0],))
-                processes.append(prs)
-    for process in processes:
-        process.start()
-        ta_ind = queue.get()
-        if isinstance(ta_ind, pd.Series):
-            ohlc_data[str(ta_ind.name)] = ta_ind
-        elif isinstance(ta_ind, pd.DataFrame):
-            for column in ta_ind:
-                ohlc_data[str(column)] = ta_ind[column]
-    for process in processes:
-        process.join()
-    if error != None:
+                psar_indicator_data(
+                    ohlc_data, name[1]['af'], name[1]['max_af'], name[0])
+    if error is not None:
         raise Exception("krakentren- add_ta -Missing "
                         "or faulty T.A. indicator elements: "
                         + str(error))
