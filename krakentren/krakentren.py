@@ -7,7 +7,7 @@ import hashlib
 import hmac
 import pandas as pd
 import requests
-from .ta import (sma_indicator_data,
+from ta import (sma_indicator_data,
                  mfi_indicator_data,
                  psl_indicator_data,
                  chop_indicator_data,
