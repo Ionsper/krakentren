@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name="krakentren",
-      version="0.11.15",
+      version="0.11.16",
       description="A python package to interact with Kraken.com REST API",
       url="https://github.com/Ionsper/krakentren",
       author="Ionsper",
