@@ -9,6 +9,6 @@ setup(name="krakentren",
       license="MIT",
       packages=["krakentren"],
       python_requires='>=3.9.2',
-      install_requires=["numpy==1.22.3",
-                        "pandas==1.4.2",
-                        "requests==2.27.1"])
+      install_requires=["numpy==2.0.0",
+                        "pandas==2.2.2",
+                        "requests==2.32.3"])
