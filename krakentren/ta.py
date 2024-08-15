@@ -1,8 +1,9 @@
-# Technical analysis toolbox
-import numpy as np
-import pandas as pd
+"""Technical analysis toolbox"""
 from math import log10
 from sys import float_info
+
+import numpy as np
+import pandas as pd
 
 
 def sma_indicator_data(df: pd.DataFrame, period: int, column_name: str):
@@ -11,7 +12,6 @@ def sma_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     https://www.investopedia.com/terms/m/movingaverage.asp
 
     Args:
-        queue (method): multiprocessing.queue
         df (pd.DataFrame): ohlc data Dataframe
         period (int): simple moving average period
         column_name (str): name on Dataframe column
@@ -26,7 +26,6 @@ def mfi_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     https://www.investopedia.com/terms/m/mfi.asp
 
     Args:
-        queue (method): multiprocessing.queue
         df (pd.DataFrame): ohlc data Dataframe
         period (int): money flow index period
         column_name (str): name on Dataframe column
@@ -41,13 +40,13 @@ def mfi_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     df["Raw money flow"] = df["Typical price"] * df["volume"]
     # Calculates positive money_flow for every row
     df["positive_money_flow"] = df[df['Period compare'] != -1]['Raw money flow']
-    df["positive_money_flow"].fillna(0, inplace=True)
+    df.fillna({"positive_money_flow": 0}, inplace=True)
     df["positive_money_flow"] = df["positive_money_flow"].rolling(
         window=period).sum()
     # Calculates negative money_flow for every row
     df["negative_money_flow"] = df[df['Period compare']
                                    == -1]['Raw money flow']
-    df["negative_money_flow"].fillna(0, inplace=True)
+    df.fillna({"negative_money_flow": 0}, inplace=True)
     df["negative_money_flow"] = df["negative_money_flow"].rolling(
         window=period).sum()
     # Calculates money flow ratio for every row
@@ -68,7 +67,6 @@ def psl_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     https://library.tradingtechnologies.com/trade/chrt-ti-psychological-line.html
 
     Args:
-        queue (method): multiprocessing.queue
         df (pd.DataFrame): ohlc data Dataframe
         period (int): psychological line period
         column_name (str): name on Dataframe column
@@ -87,7 +85,6 @@ def chop_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     https://www.motivewave.com/studies/choppiness_index.htm
 
     Args:
-        queue (method): multiprocessing.queue
         df (pd.DataFrame): ohlc data Dataframe
         period (int): choppiness index period
         column_name (str): name on Dataframe column
@@ -114,7 +111,6 @@ def roc_indicator_data(df: pd.DataFrame, period: int, column_name: str):
     https://www.investopedia.com/terms/p/pricerateofchange.asp
 
     Args:
-        queue (method): multiprocessing.queue
         df (pd.DataFrame): ohlc data Dataframe
         period (int): price rate of change period
         column_name (str): name on Dataframe column
@@ -130,7 +126,6 @@ def adl_indicator_data(df: pd.DataFrame, column_name: str):
     https://www.investopedia.com/terms/a/accumulationdistribution.asp
 
     Args:
-        queue (method): multiprocessing.queue
         df (pd.DataFrame): ohlc data Dataframe
         column_name (str): name on Dataframe column
     """
@@ -152,7 +147,6 @@ def psar_indicator_data(df: pd.DataFrame, iaf: float, max_af: float, column_name
     https://www.investopedia.com/trading/introduction-to-parabolic-sar/
 
     Args:
-        queue (method): multiprocessing.queue
         df (pd.DataFrame): ohlc data Dataframe
         iaf (float): initial value
         max_af (float): max af value
@@ -206,7 +200,7 @@ def psar_indicator_data(df: pd.DataFrame, iaf: float, max_af: float, column_name
                     df.loc[row, column_name] = df["High"][row-1]
                 if df["High"][row-2] > df[column_name][row]:
                     df.loc[row, column_name] = df["High"][row-2]
-    df[column_name + " trend"] = np.where(df["uptrend"] == True,
+    df[column_name + " trend"] = np.where(df["uptrend"] is True,
                                           "Uptrend",
                                           "downtrend")
     df.loc[0, column_name] = None

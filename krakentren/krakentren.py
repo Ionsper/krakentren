@@ -31,12 +31,12 @@ def round_down_decimals(number: float, decimals: int) -> float:
 
 
 def contact_kraken(method,
-                   parameters: dict = None,
+                   parameters=None,
                    public_key="",
                    private_key=""
                    ) -> dict:
     """Contacts Kraken's REST API through HTTP requests.
-    For Api methods check: https://www.kraken.com/features/api
+    For Api methods check: https://docs.kraken.com/rest/
 
     Args:
         method (str): API method to call
@@ -45,6 +45,8 @@ def contact_kraken(method,
     Returns:
         json: Dict with requested data
     """
+    if not parameters:
+        parameters = {}
     api_public = {"Time", "Assets", "AssetPairs",
                   "Ticker", "OHLC", "Depth", "Trades", "Spread"}
     api_private = {"Balance", "TradeBalance", "OpenOrders", "ClosedOrders",
@@ -61,7 +63,8 @@ def contact_kraken(method,
     if method in api_public:
         api_url = api_domain + "/0/public/" + method
         try:
-            api_data = requests.get(api_url, params=parameters,
+            api_data = requests.get(api_url,
+                                    params=parameters,
                                     timeout=timeout_sec)
         except Exception as error:
             raise Exception('krakentren ApiError: ' + str(error)) from error
@@ -71,7 +74,7 @@ def contact_kraken(method,
         api_key = public_key
         api_secret = base64.b64decode(private_key)
         api_nonce = str(int(time()*1000))
-        api_postdata = (urlencode(parameters) + "&nonce=" + api_nonce)
+        api_postdata = urlencode(parameters) + "&nonce=" + api_nonce
         api_postdata = api_postdata.encode('utf-8')
         api_sha256 = hashlib.sha256(
             api_nonce.encode('utf-8') + api_postdata).digest()
@@ -87,10 +90,9 @@ def contact_kraken(method,
         except Exception as error:
             raise Exception('krakentren ApiError: ' + str(error)) from error
     api_data = api_data.json()
-    if api_data["error"] == []:
-        return api_data["result"]
-    else:
+    if api_data["error"]:  # If api returns error raise Exception
         raise Exception('krakentren ApiError: ' + str(api_data["error"]))
+    return api_data["result"]
 
 
 def get_server_time() -> dict:
@@ -276,49 +278,48 @@ def add_ta(ohlc_data, **kwargs):
                 or name[1]['indicator'] not in indicators):
             error = name
             break
-        else:
-            if name[1]['indicator'] == 'sma':
-                if ('period' not in name[1] or name[1]['period'] < 0):
-                    error = name
-                    break
-                sma_indicator_data(ohlc_data, name[1]['period'], name[0])
-            if name[1]['indicator'] == 'mfi':
-                if ('period' not in name[1] or name[1]['period'] < 0):
-                    error = name
-                    break
-                mfi_indicator_data(ohlc_data, name[1]['period'], name[0])
-            if name[1]['indicator'] == 'psl':
-                if ('period' not in name[1] or name[1]['period'] < 0):
-                    error = name
-                    break
-                psl_indicator_data(ohlc_data, name[1]['period'], name[0])
-            if name[1]['indicator'] == 'chop':
-                if ('period' not in name[1] or name[1]['period'] < 0):
-                    error = name
-                    break
-                chop_indicator_data(ohlc_data, name[1]['period'], name[0])
-            if name[1]['indicator'] == 'roc':
-                if ('period' not in name[1] or name[1]['period'] < 0):
-                    error = name
-                    break
-                roc_indicator_data(ohlc_data, name[1]['period'], name[0])
-            if name[1]['indicator'] == 'adl':
-                adl_indicator_data(ohlc_data, name[0])
-            if name[1]['indicator'] == 'psar':
-                if ('af' not in name[1]
-                        or 'max_af' not in name[1]
-                        or name[1]['af'] < 0
-                        or name[1]['max_af'] < 0
-                        or name[1]['af'] > 0.08
-                        or name[1]['max_af'] > 0.8):
-                    error = name
-                    break
-                psar_indicator_data(
-                    ohlc_data, name[1]['af'], name[1]['max_af'], name[0])
-    if error is not None:
-        raise Exception("krakentren- add_ta -Missing "
-                        "or faulty T.A. indicator elements: "
-                        + str(error))
+        if name[1]['indicator'] == 'sma':
+            if ('period' not in name[1] or name[1]['period'] < 0):
+                error = name
+                break
+            sma_indicator_data(ohlc_data, name[1]['period'], name[0])
+        if name[1]['indicator'] == 'mfi':
+            if ('period' not in name[1] or name[1]['period'] < 0):
+                error = name
+                break
+            mfi_indicator_data(ohlc_data, name[1]['period'], name[0])
+        if name[1]['indicator'] == 'psl':
+            if ('period' not in name[1] or name[1]['period'] < 0):
+                error = name
+                break
+            psl_indicator_data(ohlc_data, name[1]['period'], name[0])
+        if name[1]['indicator'] == 'chop':
+            if ('period' not in name[1] or name[1]['period'] < 0):
+                error = name
+                break
+            chop_indicator_data(ohlc_data, name[1]['period'], name[0])
+        if name[1]['indicator'] == 'roc':
+            if ('period' not in name[1] or name[1]['period'] < 0):
+                error = name
+                break
+            roc_indicator_data(ohlc_data, name[1]['period'], name[0])
+        if name[1]['indicator'] == 'adl':
+            adl_indicator_data(ohlc_data, name[0])
+        if name[1]['indicator'] == 'psar':
+            if ('af' not in name[1]
+                    or 'max_af' not in name[1]
+                    or name[1]['af'] < 0
+                    or name[1]['max_af'] < 0
+                    or name[1]['af'] > 0.08
+                    or name[1]['max_af'] > 0.8):
+                error = name
+                break
+            psar_indicator_data(
+                ohlc_data, name[1]['af'], name[1]['max_af'], name[0])
+    if error:
+        raise ValueError("krakentren - add_ta -"
+                         + " Problematic indicator values: "
+                         + str(error))
 
 
 class Coin:
@@ -375,7 +376,7 @@ class Coin:
                 ohlc_data["DateTime"], unit='s')
         return ohlc_data[-num_of_last_bars:].reset_index(drop=True)
 
-    def place_order(self, order_details: dict, public_key: str, private_key: str) -> str:
+    def place_order(self, order_details: dict, public_key: str, private_key: str) -> dict:
         """Places trade orders
 
         Args:
@@ -384,7 +385,7 @@ class Coin:
             private_key (str): Kraken API private key
 
         Returns:
-            str: str: Order's transaction id in case of successfull placement
+            dict: Order's transaction id in case of successfull placement
         """
         order_details["pair"] = self.pair
         order = contact_kraken("AddOrder",
@@ -393,5 +394,4 @@ class Coin:
                                private_key)
         if "validate" in order_details:
             return order
-        else:
-            return order['txid'][0]
+        return order['txid'][0]
