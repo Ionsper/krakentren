@@ -200,7 +200,7 @@ def psar_indicator_data(df: pd.DataFrame, iaf: float, max_af: float, column_name
                     df.loc[row, column_name] = df["High"][row-1]
                 if df["High"][row-2] > df[column_name][row]:
                     df.loc[row, column_name] = df["High"][row-2]
-    df[column_name + " trend"] = np.where(df["uptrend"] is True,
+    df[column_name + " trend"] = np.where(df["uptrend"] == True,
                                           "Uptrend",
                                           "downtrend")
     df.loc[0, column_name] = None
